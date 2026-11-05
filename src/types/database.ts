@@ -55,9 +55,10 @@ export type Database = {
       }
       objects: {
         Row: ConstructionObject
-        Insert: Omit<ConstructionObject, 'id' | 'created_at'> & {
+        Insert: Omit<ConstructionObject, 'id' | 'created_at' | 'created_by'> & {
           id?: string
           created_at?: string
+          created_by?: string
         }
         Update: Partial<ConstructionObject>
         Relationships: []

@@ -224,6 +224,21 @@ create trigger task_status_history_guard
   before update or delete on public.task_status_history
   for each row execute function public.forbid_history_mutation();
 
+-- При удалении задачи (и каскаде с объекта) разрешаем снос связанной истории
+create or replace function public.allow_history_on_task_delete()
+returns trigger
+language plpgsql
+as $$
+begin
+  perform set_config('app.allow_history_write', 'on', true);
+  return old;
+end;
+$$;
+
+create trigger tasks_before_delete_allow_history
+  before delete on public.tasks
+  for each row execute function public.allow_history_on_task_delete();
+
 -- Создание объекта: created_by = текущий пользователь
 create or replace function public.enforce_object_insert()
 returns trigger

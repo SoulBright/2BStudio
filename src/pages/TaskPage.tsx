@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { StatusBadge } from '../components/StatusBadge'
 import { TaskActions } from '../components/TaskActions'
+import { TaskForm } from '../components/TaskForm'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import type {
@@ -24,14 +25,17 @@ function profileName(profile: Profile | undefined, fallbackId: string) {
 
 export function TaskPage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const { user, isManager } = useAuth()
 
   const [task, setTask] = useState<Task | null>(null)
   const [object, setObject] = useState<ConstructionObject | null>(null)
   const [profiles, setProfiles] = useState<Record<string, Profile>>({})
+  const [executors, setExecutors] = useState<Profile[]>([])
   const [history, setHistory] = useState<TaskStatusHistory[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [editing, setEditing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
@@ -104,8 +108,17 @@ export function TaskPage() {
       setProfiles({})
     }
 
+    if (isManager) {
+      const { data: executorRows } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'executor')
+        .order('full_name', { ascending: true })
+      setExecutors(executorRows ?? [])
+    }
+
     setLoading(false)
-  }, [id])
+  }, [id, isManager])
 
   useEffect(() => {
     void load()
@@ -141,6 +154,28 @@ export function TaskPage() {
     await load()
   }
 
+  async function handleDeleteTask() {
+    if (!task) return
+    if (!window.confirm(`Удалить задачу «${task.title}»?`)) {
+      return
+    }
+
+    setBusy(true)
+    const objectId = task.object_id
+    const { error: deleteError } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', task.id)
+    setBusy(false)
+
+    if (deleteError) {
+      setError(deleteError.message)
+      return
+    }
+
+    navigate(`/objects/${objectId}`)
+  }
+
   if (loading) {
     return (
       <section className="panel">
@@ -162,9 +197,7 @@ export function TaskPage() {
     return null
   }
 
-  const backTo = object
-    ? `/objects/${object.id}`
-    : '/objects'
+  const backTo = object ? `/objects/${object.id}` : '/objects'
 
   return (
     <div className="stack">
@@ -173,52 +206,112 @@ export function TaskPage() {
           ← {object ? object.name : 'К объектам'}
         </Link>
 
-        <div className="panel-header">
-          <h1>{task.title}</h1>
-          <StatusBadge status={task.status} />
-        </div>
+        {editing && isManager ? (
+          <>
+            <h1>Редактировать задачу</h1>
+            <TaskForm
+              executors={executors}
+              initial={{
+                title: task.title,
+                description: task.description,
+                assignee_id: task.assignee_id,
+              }}
+              submitLabel="Сохранить"
+              onSubmit={async (values) => {
+                const { error: updateError } = await supabase
+                  .from('tasks')
+                  .update({
+                    title: values.title,
+                    description: values.description,
+                    assignee_id: values.assignee_id,
+                  })
+                  .eq('id', task.id)
 
-        <p>{task.description || 'Без описания'}</p>
+                if (updateError) {
+                  throw new Error(updateError.message)
+                }
 
-        <dl className="meta-list">
-          <div>
-            <dt>Объект</dt>
-            <dd>
-              {object ? (
-                <Link to={`/objects/${object.id}`}>{object.name}</Link>
-              ) : (
-                '—'
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt>Исполнитель</dt>
-            <dd>{profileName(profiles[task.assignee_id], task.assignee_id)}</dd>
-          </div>
-          <div>
-            <dt>Автор</dt>
-            <dd>{profileName(profiles[task.author_id], task.author_id)}</dd>
-          </div>
-          <div>
-            <dt>Создана</dt>
-            <dd>{new Date(task.created_at).toLocaleString('ru-RU')}</dd>
-          </div>
-        </dl>
+                setEditing(false)
+                await load()
+              }}
+              onCancel={() => setEditing(false)}
+            />
+          </>
+        ) : (
+          <>
+            <div className="panel-header">
+              <h1>{task.title}</h1>
+              <div className="btn-row">
+                <StatusBadge status={task.status} />
+                {isManager ? (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      onClick={() => setEditing(true)}
+                    >
+                      Изменить
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      disabled={busy}
+                      onClick={() => void handleDeleteTask()}
+                    >
+                      Удалить
+                    </button>
+                  </>
+                ) : null}
+              </div>
+            </div>
 
-        {error ? <p className="error">{error}</p> : null}
+            <p>{task.description || 'Без описания'}</p>
+
+            <dl className="meta-list">
+              <div>
+                <dt>Объект</dt>
+                <dd>
+                  {object ? (
+                    <Link to={`/objects/${object.id}`}>{object.name}</Link>
+                  ) : (
+                    '—'
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt>Исполнитель</dt>
+                <dd>
+                  {profileName(profiles[task.assignee_id], task.assignee_id)}
+                </dd>
+              </div>
+              <div>
+                <dt>Автор</dt>
+                <dd>{profileName(profiles[task.author_id], task.author_id)}</dd>
+              </div>
+              <div>
+                <dt>Создана</dt>
+                <dd>{new Date(task.created_at).toLocaleString('ru-RU')}</dd>
+              </div>
+            </dl>
+
+            {error ? <p className="error">{error}</p> : null}
+          </>
+        )}
       </section>
 
-      <section className="panel">
-        <h2>Действия</h2>
-        <TaskActions
-          status={task.status}
-          isManager={isManager}
-          userId={user.id}
-          assigneeId={task.assignee_id}
-          busy={busy}
-          onTransition={handleTransition}
-        />
-      </section>
+      {!editing ? (
+        <section className="panel">
+          <h2>Действия</h2>
+          <TaskActions
+            status={task.status}
+            isManager={isManager}
+            userId={user.id}
+            assigneeId={task.assignee_id}
+            busy={busy}
+            onTransition={handleTransition}
+          />
+        </section>
+      ) : null}
 
       <section className="panel">
         <h2>История статусов</h2>
