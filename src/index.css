@@ -312,6 +312,79 @@ p {
   color: #a12828;
 }
 
+.meta-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+}
+
+.meta-list > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.meta-list dt {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.meta-list dd {
+  margin: 0;
+}
+
+.task-actions {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.btn-danger {
+  background: #fde8e8;
+  color: var(--danger);
+  border-color: #f0c2c2;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #f8d4d4;
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.history-list li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.history-list li:last-child {
+  border-bottom: 0;
+}
+
+.history-list__title {
+  font-weight: 600;
+}
+
+.history-list__comment {
+  margin-top: 0.35rem;
+  padding: 0.5rem 0.65rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
 @media (max-width: 720px) {
   .app-header {
     flex-wrap: wrap;
