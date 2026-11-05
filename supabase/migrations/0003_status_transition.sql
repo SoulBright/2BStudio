@@ -21,17 +21,22 @@ begin
     raise exception 'Нужна авторизация';
   end if;
 
+  v_is_manager := public.is_manager();
+
   select * into v_task
   from public.tasks
   where id = p_task_id
+    and (
+      v_is_manager
+      or assignee_id = v_uid
+    )
   for update;
 
   if not found then
-    raise exception 'Задача не найдена';
+    raise exception 'Задача не найдена или нет доступа';
   end if;
 
   v_from := v_task.status;
-  v_is_manager := public.is_manager();
 
   -- Разрешённые переходы
   if v_from = 'new' and p_new_status = 'in_progress' then

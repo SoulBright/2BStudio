@@ -41,6 +41,7 @@ npm run preview
 2. `0002_rls.sql` — политики доступа
 3. `0003_status_transition.sql` — `transition_task_status`
 4. `0004_allow_history_cascade_on_task_delete.sql` — каскадное удаление истории вместе с задачей
+5. `0005_prevent_task_status_leak.sql` — единый отказ при обращении к чужой задаче
 
 Затем:
 
