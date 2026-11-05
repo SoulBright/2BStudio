@@ -80,7 +80,7 @@ npm run preview
 
 ## Деплой на Vercel
 
-1. Залейте репозиторий на GitHub
+1. Залейте репозиторий на GitHub (в корне есть `vercel.json` для SPA-роутинга)
 2. [vercel.com](https://vercel.com) → Import project
 3. Framework: Vite. Build: `npm run build`, Output: `dist`
 4. Environment Variables:
